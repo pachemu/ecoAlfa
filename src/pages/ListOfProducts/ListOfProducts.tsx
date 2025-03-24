@@ -1,17 +1,28 @@
-import { useGetPhotosQuery } from "../../app/api/productsApi.ts";
-import { Button, Card, List } from "antd";
+import { useGetPhotosQuery } from "@/app/api/productsApi.ts";
+import { Button, Card, List, Switch } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { HeartFilled, HeartOutlined } from "@ant-design/icons";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { addPhotos, toggleLike } from "@/app/store/reducers/photosSlice.ts";
 import { RootState } from "@/app/store/StoreProvider.ts";
+import Title from "antd/lib/typography/Title";
+import { selectSortedPhotos } from "@/app/store/reducers/photosSlice.ts";
+import { UnsplashPhoto } from "@/app/api/productsApi.ts";
+import {deletePhoto, selectLikedPhotos} from "@/app/store/reducers/photosSlice.ts";
 
 export default function ListOfProducts() {
     const { data: apiPhotos, isLoading, isError } = useGetPhotosQuery({ page: 1, perPage: 10 });
-    const { photos, likedPhotos } = useSelector((state: RootState) => state.photos);
-    const navigate = useNavigate();
     const dispatch = useDispatch();
+    const navigate = useNavigate();
+
+    const allPhotos = useSelector((state: RootState) => state.photos.photos);
+    const likedPhotos = useSelector(selectLikedPhotos);
+    const sortedPhotos = useSelector(selectSortedPhotos);
+
+    const [showLikedOnly, setShowLikedOnly] = useState(false);
+
+    const photosToShow = showLikedOnly ? sortedPhotos : allPhotos;
 
     useEffect(() => {
         if (apiPhotos) {
@@ -28,28 +39,44 @@ export default function ListOfProducts() {
         dispatch(toggleLike(id));
     };
 
+    const handleDelete = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        dispatch(deletePhoto(id));
+    }
     if (isError) return <div>Error</div>;
 
     return (
         <div>
-            <h1>Список продуктов</h1>
+            <Title>Список продуктов</Title>
+
+            <div style={{ marginBottom: 16 }}>
+                <Switch
+                    checkedChildren="Показать избранные"
+                    unCheckedChildren="Все фото"
+                    onChange={(checked) => setShowLikedOnly(checked)}
+                />
+            </div>
             <List
                 grid={{ gutter: 16, column: 6 }}
                 loading={isLoading}
                 pagination={{ position: "top", align: "center" }}
-                dataSource={photos}
-                renderItem={(item) => (
+                dataSource={photosToShow}
+                renderItem={(item: UnsplashPhoto) => (
                     <List.Item>
                         <Card
                             actions={[
                                 <Button
-                                    style={{
-                                        width: 50,
-                                        height: 50
-                                    }}
                                     type="text"
-                                    icon={likedPhotos[item.id] ? <HeartFilled style={{ color: "red" }} /> : <HeartOutlined />}
+                                    icon={
+                                        likedPhotos[item.id]
+                                            ? <HeartFilled style={{ color: "red" }} />
+                                            : <HeartOutlined />
+                                    }
                                     onClick={(e) => handleLike(item.id, e)}
+                                />,
+                                <Button
+                                type="text"
+                                onClick={(e) => handleDelete(item.id, e)}
                                 />
                             ]}
                             onClick={() => handleCardClick(item.id)}
@@ -58,15 +85,12 @@ export default function ListOfProducts() {
                             title={item.alt_description}
                             cover={
                                 <img
-                                    style={{
-                                        height: 400,
-                                }}
+                                    style={{ height: 400 }}
                                     alt={item.description}
                                     src={item.urls.small}
                                 />
                             }
-                        >
-                        </Card>
+                        />
                     </List.Item>
                 )}
             />

@@ -1,16 +1,21 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import {createSelector, createSlice, PayloadAction} from "@reduxjs/toolkit";
 import {UnsplashPhoto} from "../../api/productsApi.ts";
+import {RootState} from "../StoreProvider.ts";
 
 interface PhotosState {
-    likedPhotos: Record<string, boolean>; 
+    likedPhotos: Record<string, boolean>;
     photos: UnsplashPhoto[];
+    deletedIds: string[];
 }
 
 const loadInitialState = (): PhotosState => {
-    const saved = localStorage.getItem("likedPhotos");
+    const savedLikes = localStorage.getItem("likedPhotos");
+    const savedDeleted = localStorage.getItem("deletedIds");
+
     return {
-        likedPhotos: saved ? JSON.parse(saved) : {},
-        photos: []
+        likedPhotos: savedLikes ? JSON.parse(savedLikes) : {},
+        photos: [],
+        deletedIds: savedDeleted ? JSON.parse(savedDeleted) : [] // Инициализируем удаленные ID
     };
 };
 
@@ -24,10 +29,42 @@ const photosSlice = createSlice({
             localStorage.setItem("likedPhotos", JSON.stringify(state.likedPhotos));
         },
         addPhotos: (state, action: PayloadAction<UnsplashPhoto[]>) => {
-            state.photos = action.payload;
-        }
+            const newPhotos = action.payload.filter(photo =>
+                !state.deletedIds.includes(photo.id) &&
+                !state.photos.some(p => p.id === photo.id)
+            );
+
+            state.photos.push(...newPhotos);
+        },
+        deletePhoto: (state, action: PayloadAction<string>) => {
+            const photoId = action.payload;
+
+            // Удаляем из основного списка
+            state.photos = state.photos.filter(photo => photo.id !== photoId);
+
+            // Добавляем в список удаленных
+            state.deletedIds.push(photoId);
+            localStorage.setItem("deletedIds", JSON.stringify(state.deletedIds));
+
+            // Удаляем из лайков
+            if (state.likedPhotos[photoId]) {
+                delete state.likedPhotos[photoId];
+                localStorage.setItem("likedPhotos", JSON.stringify(state.likedPhotos));
+            }
+        },
     }
 });
 
-export const { toggleLike, addPhotos } = photosSlice.actions;
+export const selectVisiblePhotos = createSelector(
+    [(state: RootState) => state.photos.photos],
+    (photos) => photos
+);
+
+export const selectLikedPhotos = (state: RootState) => state.photos.likedPhotos;
+export const selectSortedPhotos = createSelector(
+    [selectVisiblePhotos, selectLikedPhotos],
+    (photos, likedPhotos) => photos.filter(photo => likedPhotos[photo.id])
+);
+
+export const { toggleLike, addPhotos, deletePhoto } = photosSlice.actions;
 export default photosSlice.reducer;
