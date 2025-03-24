@@ -1,6 +1,6 @@
 import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react';
 
-interface UnsplashPhoto {
+export interface UnsplashPhoto {
     id: string;
     urls: {
         small: string; regular: string;
@@ -10,6 +10,7 @@ interface UnsplashPhoto {
     user: {
         name: string;
     };
+    isLiked?: boolean;
 }
 
 export const unsplashApi = createApi({
