@@ -1,70 +1,73 @@
-import {createSelector, createSlice, PayloadAction} from "@reduxjs/toolkit";
-import {UnsplashPhoto} from "../../api/productsApi.ts";
-import {RootState} from "../StoreProvider.ts";
+import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit';
+import { UnsplashPhoto } from '../../api/productsApi.ts';
+import { RootState } from '../StoreProvider.ts';
 
 interface PhotosState {
-    likedPhotos: Record<string, boolean>;
-    photos: UnsplashPhoto[];
+    rawPhotos: UnsplashPhoto[];
+    likedIds: string[];
     deletedIds: string[];
 }
 
-const loadInitialState = (): PhotosState => {
-    const savedLikes = localStorage.getItem("likedPhotos");
-    const savedDeleted = localStorage.getItem("deletedIds");
+const loadPersistedState = () => ({
+    likedIds: JSON.parse(localStorage.getItem('likedIds') || '[]'),
+    deletedIds: JSON.parse(localStorage.getItem('deletedIds') || '[]')
+});
 
-    return {
-        likedPhotos: savedLikes ? JSON.parse(savedLikes) : {},
-        photos: [],
-        deletedIds: savedDeleted ? JSON.parse(savedDeleted) : [] // Инициализируем удаленные ID
-    };
+const initialState: PhotosState = {
+    rawPhotos: [],
+    ...loadPersistedState()
 };
 
 const photosSlice = createSlice({
-    name: "photos",
-    initialState: loadInitialState(),
+    name: 'photos',
+    initialState,
     reducers: {
-        toggleLike: (state, action: PayloadAction<string>) => {
-            const photoId = action.payload;
-            state.likedPhotos[photoId] = !state.likedPhotos[photoId];
-            localStorage.setItem("likedPhotos", JSON.stringify(state.likedPhotos));
+        setRawPhotos: (state, action: PayloadAction<UnsplashPhoto[]>) => {
+            if (state.rawPhotos.length === 0) {
+                state.rawPhotos = action.payload;
+            }
         },
-        addPhotos: (state, action: PayloadAction<UnsplashPhoto[]>) => {
-            const newPhotos = action.payload.filter(photo =>
-                !state.deletedIds.includes(photo.id) &&
-                !state.photos.some(p => p.id === photo.id)
-            );
-
-            state.photos.push(...newPhotos);
+        toggleLike: (state, action: PayloadAction<string>) => {
+            const id = action.payload;
+            const index = state.likedIds.indexOf(id);
+            if (index === -1) {
+                state.likedIds.push(id);
+            } else {
+                state.likedIds.splice(index, 1);
+            }
+            localStorage.setItem('likedIds', JSON.stringify(state.likedIds));
         },
         deletePhoto: (state, action: PayloadAction<string>) => {
-            const photoId = action.payload;
-
-            // Удаляем из основного списка
-            state.photos = state.photos.filter(photo => photo.id !== photoId);
-
-            // Добавляем в список удаленных
-            state.deletedIds.push(photoId);
-            localStorage.setItem("deletedIds", JSON.stringify(state.deletedIds));
-
-            // Удаляем из лайков
-            if (state.likedPhotos[photoId]) {
-                delete state.likedPhotos[photoId];
-                localStorage.setItem("likedPhotos", JSON.stringify(state.likedPhotos));
+            const id = action.payload;
+            if (!state.deletedIds.includes(id)) {
+                state.deletedIds.push(id);
+                localStorage.setItem('deletedIds', JSON.stringify(state.deletedIds));
             }
+            const likeIndex = state.likedIds.indexOf(id);
+            if (likeIndex !== -1) {
+                state.likedIds.splice(likeIndex, 1);
+                localStorage.setItem('likedIds', JSON.stringify(state.likedIds));
+            }
+        },
+        addNewPhoto: (state, action: PayloadAction<Omit<UnsplashPhoto, 'id'>>) => {
+            const newPhoto = {
+                ...action.payload,
+                id: `local_${String.fromCharCode(65 + Math.floor(Math.random() * 26)) + Date.now()}`,
+                urls: {
+                    small: action.payload.urls.small,
+                    regular: action.payload.urls.small
+                }
+            };
+            state.rawPhotos.unshift(newPhoto);
         },
     }
 });
 
 export const selectVisiblePhotos = createSelector(
-    [(state: RootState) => state.photos.photos],
-    (photos) => photos
+    [(state: RootState) => state.photos.rawPhotos,
+        (state: RootState) => state.photos.deletedIds],
+    (raw, deleted) => raw.filter(photo => !deleted.includes(photo.id))
 );
 
-export const selectLikedPhotos = (state: RootState) => state.photos.likedPhotos;
-export const selectSortedPhotos = createSelector(
-    [selectVisiblePhotos, selectLikedPhotos],
-    (photos, likedPhotos) => photos.filter(photo => likedPhotos[photo.id])
-);
-
-export const { toggleLike, addPhotos, deletePhoto } = photosSlice.actions;
+export const { setRawPhotos, toggleLike, deletePhoto, addNewPhoto } = photosSlice.actions;
 export default photosSlice.reducer;

@@ -2,34 +2,30 @@ import { useGetPhotosQuery } from "@/app/api/productsApi.ts";
 import { Button, Card, List, Switch } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { HeartFilled, HeartOutlined } from "@ant-design/icons";
-import { useEffect, useState } from "react";
-import { addPhotos, toggleLike } from "@/app/store/reducers/photosSlice.ts";
+import { HeartFilled, HeartOutlined, DeleteOutlined } from "@ant-design/icons";
+import React, { useState } from "react";
+import {
+    toggleLike,
+    deletePhoto,
+    selectVisiblePhotos
+} from "@/app/store/reducers/photosSlice.ts";
 import { RootState } from "@/app/store/StoreProvider.ts";
 import Title from "antd/lib/typography/Title";
-import { selectSortedPhotos } from "@/app/store/reducers/photosSlice.ts";
 import { UnsplashPhoto } from "@/app/api/productsApi.ts";
-import {deletePhoto, selectLikedPhotos} from "@/app/store/reducers/photosSlice.ts";
+import styles from './ListOfProducts.module.scss'
 
 export default function ListOfProducts() {
-    const { data: apiPhotos, isLoading, isError } = useGetPhotosQuery({ page: 1, perPage: 10 });
+    const { data: apiPhotos, isLoading, isError } = useGetPhotosQuery({ page: 1, perPage: 10 }, {
+        refetchOnMountOrArgChange: false,
+        refetchOnReconnect: false,
+        refetchOnFocus: false
+    });
     const dispatch = useDispatch();
     const navigate = useNavigate();
-
-    const allPhotos = useSelector((state: RootState) => state.photos.photos);
-    const likedPhotos = useSelector(selectLikedPhotos);
-    const sortedPhotos = useSelector(selectSortedPhotos);
-
+    const visiblePhotos = useSelector(selectVisiblePhotos);
+    const likedIds = useSelector((state: RootState) => state.photos.likedIds);
     const [showLikedOnly, setShowLikedOnly] = useState(false);
-
-    const photosToShow = showLikedOnly ? sortedPhotos : allPhotos;
-
-    useEffect(() => {
-        if (apiPhotos) {
-            dispatch(addPhotos(apiPhotos));
-        }
-    }, [apiPhotos, dispatch]);
-
+    console.log(visiblePhotos, apiPhotos)
     const handleCardClick = (id: string) => {
         navigate(`/product/${id}`);
     };
@@ -42,8 +38,13 @@ export default function ListOfProducts() {
     const handleDelete = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         dispatch(deletePhoto(id));
-    }
+    };
+
     if (isError) return <div>Error</div>;
+
+    const photosToShow = showLikedOnly
+        ? visiblePhotos.filter(photo => likedIds.includes(photo.id))
+        : visiblePhotos;
 
     return (
         <div>
@@ -53,9 +54,10 @@ export default function ListOfProducts() {
                 <Switch
                     checkedChildren="Показать избранные"
                     unCheckedChildren="Все фото"
-                    onChange={(checked) => setShowLikedOnly(checked)}
+                    onChange={setShowLikedOnly}
                 />
             </div>
+
             <List
                 grid={{ gutter: 16, column: 6 }}
                 loading={isLoading}
@@ -68,15 +70,17 @@ export default function ListOfProducts() {
                                 <Button
                                     type="text"
                                     icon={
-                                        likedPhotos[item.id]
+                                        likedIds.includes(item.id)
                                             ? <HeartFilled style={{ color: "red" }} />
                                             : <HeartOutlined />
                                     }
                                     onClick={(e) => handleLike(item.id, e)}
                                 />,
                                 <Button
-                                type="text"
-                                onClick={(e) => handleDelete(item.id, e)}
+                                    type="text"
+                                    danger
+                                    icon={<DeleteOutlined />}
+                                    onClick={(e) => handleDelete(item.id, e)}
                                 />
                             ]}
                             onClick={() => handleCardClick(item.id)}
@@ -94,6 +98,11 @@ export default function ListOfProducts() {
                     </List.Item>
                 )}
             />
+            <Button
+                onClick={() => navigate('/create-product')}
+                className={styles.button_createTest}>
+                Создать карточку
+            </Button>
         </div>
     );
 }
