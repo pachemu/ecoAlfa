@@ -1,5 +1,6 @@
 .main {
   padding: 24px;
+
   &_card {
     &_author {
       color: gray;
@@ -8,26 +9,33 @@
       bottom: 0;
       margin: 24px;
     }
-    &_preview{
+
+    &_preview {
       width: 400px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 10px;
+
       &_photo {
         max-height: 40vh;
         object-fit: fill;
       }
     }
+
     &_title {
       display: flex;
       flex-direction: column;
-      padding:24px;
-      font-size: 36px ;
+      padding: 24px;
+      font-size: 36px;
     }
+
     &_description {
-    position: relative;
+      position: relative;
+      margin: 24px;
+      width: 80%;
+      max-width: 600px;
     }
   }
 }
@@ -36,9 +44,63 @@
   &_back {
     margin-bottom: 16px
   }
+
   &_like {
     background-color: #f3f3f3;
-    width: 5vw!important;
+    width: 5vw !important;
     height: 5vh;
   }
+}
+
+.actions {
+  position: absolute;
+  top: 39vh;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+  z-index: 1;
+}
+
+.button_edit, .button_save, .button_cancel {
+  color: inherit;
+  background: rgba(255, 255, 255, 0.8);
+  width: 5vw !important;
+  height: 5vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    color: #1890ff;
+    background: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.image_upload {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  width: 10vw;
+}
+
+.upload_label {
+  padding: 4px 12px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.7);
+  }
+}
+
+.spin {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
 }

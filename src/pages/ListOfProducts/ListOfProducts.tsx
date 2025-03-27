@@ -1,18 +1,19 @@
 import { useGetPhotosQuery } from "@/app/api/productsApi.ts";
-import { Button, Card, List, Switch } from "antd";
+import {Button, Card, List, Select} from "antd";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { HeartFilled, HeartOutlined, DeleteOutlined } from "@ant-design/icons";
-import React, { useState } from "react";
+import React, {useEffect, useState} from "react";
 import {
     toggleLike,
     deletePhoto,
     selectVisiblePhotos
 } from "@/app/store/reducers/photosSlice.ts";
 import { RootState } from "@/app/store/StoreProvider.ts";
-import Title from "antd/lib/typography/Title";
 import { UnsplashPhoto } from "@/app/api/productsApi.ts";
 import styles from './ListOfProducts.module.scss'
+import Search from "antd/es/input/Search";
+import {setRawPhotos} from "../../app/store/reducers/photosSlice.ts";
 
 export default function ListOfProducts() {
     const { data: apiPhotos, isLoading, isError } = useGetPhotosQuery({ page: 1, perPage: 10 }, {
@@ -20,21 +21,27 @@ export default function ListOfProducts() {
         refetchOnReconnect: false,
         refetchOnFocus: false
     });
+    const [initialLoad, setInitialLoad] = useState(false);
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const visiblePhotos = useSelector(selectVisiblePhotos);
     const likedIds = useSelector((state: RootState) => state.photos.likedIds);
-    const [showLikedOnly, setShowLikedOnly] = useState(false);
-    console.log(visiblePhotos, apiPhotos)
+    const [searchText, setSearchText] = useState('');
+    const [filter, setFilter] = useState('all');
+
     const handleCardClick = (id: string) => {
         navigate(`/product/${id}`);
     };
-
     const handleLike = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         dispatch(toggleLike(id));
     };
-
+    useEffect(() => {
+        if (apiPhotos && !initialLoad) {
+            dispatch(setRawPhotos(apiPhotos));
+            setInitialLoad(true);
+        }
+    }, [apiPhotos, dispatch, initialLoad]);
     const handleDelete = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         dispatch(deletePhoto(id));
@@ -42,27 +49,42 @@ export default function ListOfProducts() {
 
     if (isError) return <div>Error</div>;
 
-    const photosToShow = showLikedOnly
-        ? visiblePhotos.filter(photo => likedIds.includes(photo.id))
-        : visiblePhotos;
+    const filteredPhotos = visiblePhotos.filter(photo => {
+        const matchesSearch = photo.alt_description?.toLowerCase().includes(searchText.toLowerCase()) ||
+            photo.description?.toLowerCase().includes(searchText.toLowerCase());
+        const matchesFilter = filter === 'all' || (filter === 'liked' && likedIds.includes(photo.id));
+        return matchesSearch && matchesFilter;
+    });
 
     return (
         <div>
-            <Title>Список продуктов</Title>
-
-            <div style={{ marginBottom: 16 }}>
-                <Switch
-                    checkedChildren="Показать избранные"
-                    unCheckedChildren="Все фото"
-                    onChange={setShowLikedOnly}
+            <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+                <Search
+                    placeholder="Поиск..."
+                    onChange={(e) => setSearchText(e.target.value)}
+                    style={{ width: 300 }}
                 />
+                <Select
+                    defaultValue="all"
+                    onChange={setFilter}
+                    style={{ width: 150 }}
+                >
+                    <Select.Option value="all">Все</Select.Option>
+                    <Select.Option value="liked">Избранные</Select.Option>
+                </Select>
             </div>
 
             <List
-                grid={{ gutter: 16, column: 6 }}
+                pagination={{
+                    pageSize: 12,
+                    showSizeChanger: true,
+                    pageSizeOptions: ['12'],
+                    position: "top",
+                    align: 'center'
+                }}
                 loading={isLoading}
-                pagination={{ position: "top", align: "center" }}
-                dataSource={photosToShow}
+                grid={{ gutter: 16, column: 6 }}
+                dataSource={filteredPhotos}
                 renderItem={(item: UnsplashPhoto) => (
                     <List.Item>
                         <Card

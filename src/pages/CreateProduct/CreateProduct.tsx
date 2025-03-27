@@ -23,7 +23,7 @@ export default function CreateProduct() {
         return false;
     };
 
-    const onFinish = (values: any) => {
+    const onFinish = (values) => {
         if (!imageUrl) {
             message.error('Пожалуйста, загрузите изображение');
             return;
@@ -37,12 +37,12 @@ export default function CreateProduct() {
                 regular: imageUrl
             },
             user: {
-                name: values.author || 'Аноним'
+                name: values.author || 'Пользователь'
             }
         };
 
         dispatch(addNewPhoto(newProduct));
-        message.success('Продукт успешно создан!');
+        message.success('Карточка успешно создана!');
         navigate('/');
     };
 

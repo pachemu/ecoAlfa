@@ -8,23 +8,71 @@ interface PhotosState {
     deletedIds: string[];
 }
 
-const loadPersistedState = () => ({
-    likedIds: JSON.parse(localStorage.getItem('likedIds') || '[]'),
-    deletedIds: JSON.parse(localStorage.getItem('deletedIds') || '[]')
-});
+const loadPersistedState = () => {
+    try {
+        const rawPhotos = JSON.parse(localStorage.getItem('rawPhotos') || '[]');
+        const likedIds = JSON.parse(localStorage.getItem('likedIds') || '[]');
+        const deletedIds = JSON.parse(localStorage.getItem('deletedIds') || '[]');
 
-const initialState: PhotosState = {
-    rawPhotos: [],
-    ...loadPersistedState()
+        return {
+            rawPhotos: Array.isArray(rawPhotos) ? rawPhotos : [],
+            likedIds: Array.isArray(likedIds) ? likedIds : [],
+            deletedIds: Array.isArray(deletedIds) ? deletedIds : []
+        };
+    } catch (e) {
+        console.error('Ошибка загрузки из localStorage', e);
+        return {
+            rawPhotos: [],
+            likedIds: [],
+            deletedIds: []
+        };
+    }
 };
+const saveFullState = (state: PhotosState) => {
+    try {
+        localStorage.setItem('rawPhotos', JSON.stringify(state.rawPhotos));
+        localStorage.setItem('likedIds', JSON.stringify(state.likedIds));
+        localStorage.setItem('deletedIds', JSON.stringify(state.deletedIds));
+    } catch (e) {
+        console.error('Ошибка сохранения в localStorage', e);
+    }
+};
+const initialState: PhotosState = loadPersistedState();
 
 const photosSlice = createSlice({
     name: 'photos',
     initialState,
     reducers: {
         setRawPhotos: (state, action: PayloadAction<UnsplashPhoto[]>) => {
-            if (state.rawPhotos.length === 0) {
-                state.rawPhotos = action.payload;
+            const newPhotos = action.payload.filter(apiPhoto =>
+                !state.rawPhotos.some(photo => photo.id === apiPhoto.id)
+            );
+            state.rawPhotos = [...state.rawPhotos, ...newPhotos];
+            saveFullState(state);
+        },
+        updatePhoto: (state, action: PayloadAction<UnsplashPhoto>) => {
+            const index = state.rawPhotos.findIndex(p => p.id === action.payload.id);
+            if (index !== -1) {
+                state.rawPhotos[index] = action.payload;
+                saveFullState(state);
+            }
+        },
+        addNewPhoto: (state, action: PayloadAction<Omit<UnsplashPhoto, 'id'>>) => {
+            const newPhoto = {
+                ...action.payload,
+                id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Уникальный ID
+                urls: {
+                    small: action.payload.urls.small,
+                    regular: action.payload.urls.small
+                },
+                isCustom: true
+            };
+
+            state.rawPhotos.unshift(newPhoto);
+            try {
+                localStorage.setItem('rawPhotos', JSON.stringify(state.rawPhotos));
+            } catch (e) {
+                console.error('Ошибка сохранения новой карточки', e);
             }
         },
         toggleLike: (state, action: PayloadAction<string>) => {
@@ -49,17 +97,6 @@ const photosSlice = createSlice({
                 localStorage.setItem('likedIds', JSON.stringify(state.likedIds));
             }
         },
-        addNewPhoto: (state, action: PayloadAction<Omit<UnsplashPhoto, 'id'>>) => {
-            const newPhoto = {
-                ...action.payload,
-                id: `local_${String.fromCharCode(65 + Math.floor(Math.random() * 26)) + Date.now()}`,
-                urls: {
-                    small: action.payload.urls.small,
-                    regular: action.payload.urls.small
-                }
-            };
-            state.rawPhotos.unshift(newPhoto);
-        },
     }
 });
 
@@ -69,5 +106,5 @@ export const selectVisiblePhotos = createSelector(
     (raw, deleted) => raw.filter(photo => !deleted.includes(photo.id))
 );
 
-export const { setRawPhotos, toggleLike, deletePhoto, addNewPhoto } = photosSlice.actions;
+export const { setRawPhotos, toggleLike, deletePhoto, addNewPhoto, updatePhoto } = photosSlice.actions;
 export default photosSlice.reducer;
