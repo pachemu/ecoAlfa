@@ -13,7 +13,7 @@ import { RootState } from "@/app/store/StoreProvider.ts";
 import { UnsplashPhoto } from "@/app/api/productsApi.ts";
 import styles from './ListOfProducts.module.scss'
 import Search from "antd/es/input/Search";
-import {setRawPhotos} from "../../app/store/reducers/photosSlice.ts";
+import {setRawPhotos} from "@/app/store/reducers/photosSlice.ts";
 
 export default function ListOfProducts() {
     const { data: apiPhotos, isLoading, isError } = useGetPhotosQuery({ page: 1, perPage: 10 }, {

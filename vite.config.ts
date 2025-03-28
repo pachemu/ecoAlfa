@@ -1,15 +1,19 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path' // Не забудьте импортировать path
 
 export default defineConfig({
   plugins: [react()],
+  base: '/pachemu.github.io/',
   resolve: {
-    extensions: ['.ts', '.tsx', '.js', '.jsx'],
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@components': path.resolve(__dirname, './src/components'),
-      '@pages': path.resolve(__dirname, './src/pages'),
+      '@pages': path.resolve(__dirname, './src/pages')
     }
+  },
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true
   }
-});
+})
