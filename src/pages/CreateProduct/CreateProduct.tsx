@@ -1,57 +1,20 @@
-import React, { useState } from 'react';
-import { Button, Card, Form, Input, Upload, message } from 'antd';
+import { Button, Card, Form, Input, Upload } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
-import { useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { addNewPhoto } from '@/app/store/reducers/photosSlice';
 import TextArea from 'antd/es/input/TextArea';
+import {useUploadHandlers} from "../../features/createProduct/hooks/hooks.ts";
 
 const { Item } = Form;
 
 export default function CreateProduct() {
+    const {imageUrl, onFinish, handleBeforeUpload} = useUploadHandlers()
     const [form] = Form.useForm();
-    const [imageUrl, setImageUrl] = useState<string>('');
-    const dispatch = useDispatch();
-    const navigate = useNavigate();
-
-    const handleBeforeUpload = (file: File) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            setImageUrl(e.target?.result as string);
-        };
-        reader.readAsDataURL(file);
-        return false;
-    };
-
-    const onFinish = (values) => {
-        if (!imageUrl) {
-            message.error('Пожалуйста, загрузите изображение');
-            return;
-        }
-
-        const newProduct = {
-            alt_description: values.title,
-            description: values.description,
-            urls: {
-                small: imageUrl,
-                regular: imageUrl
-            },
-            user: {
-                name: values.author || 'Пользователь'
-            }
-        };
-
-        dispatch(addNewPhoto(newProduct));
-        message.success('Карточка успешно создана!');
-        navigate('/');
-    };
 
     return (
         <div style={{ padding: '24px' }}>
             <Card title="Создать новый продукт">
                 <Form
                     form={form}
-                    onFinish={onFinish}
+                    onFinish={(values) => onFinish(values)}
                     layout="vertical"
                 >
                     <Item
@@ -92,7 +55,7 @@ export default function CreateProduct() {
                     >
                         <Upload
                             accept="image/*"
-                            beforeUpload={handleBeforeUpload}
+                            beforeUpload={(file) => handleBeforeUpload(file)}
                             showUploadList={false}
                         >
                             <Button icon={<UploadOutlined />}>Выбрать изображение</Button>

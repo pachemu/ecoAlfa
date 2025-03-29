@@ -1,10 +1,11 @@
 import { List, Button } from 'antd';
-import styles from './ListOfProducts.module.scss';
-import {useProductList} from "../../features/listOfProducts/hooks/useProductList.ts";
-import {SearchFilter} from "../../widgets/listOfProducts/searchFilter/ui/SearchFilter.tsx";
-import {ProductCard} from "../../widgets/listOfProducts/product-card/ui/productCard.tsx";
+import styles from './ProductList.module.scss';
+import {SearchFilter} from "@/widgets/listOfProducts/searchFilter/ui/SearchFilter.tsx";
+import {ProductCard} from "@/widgets/listOfProducts/product-card/ui/productCard.tsx";
+import {handleCardClick} from "../../product/model/hooks/handlers.ts";
+import {useProductList} from "../hooks/useProductList.ts";
 
-const ListOfProducts = () => {
+export const ProductList = () => {
     const {
         isLoading,
         isError,
@@ -19,8 +20,8 @@ const ListOfProducts = () => {
         navigate,
     } = useProductList();
 
-    if (isError) return <div className={styles.error}>Ошибка загрузки данных</div>;
-
+    if (isError) return <div>Error</div>;
+    
     return (
         <div className={styles.container}>
             <SearchFilter
@@ -31,35 +32,27 @@ const ListOfProducts = () => {
             />
 
             <List
-                pagination={{
-                    pageSize: 12,
-                    pageSizeOptions: ['12'],
-                    position: 'top',
-                    align: 'center'
-                }}
+                pagination={{ pageSize: 12, position: 'top', align: 'center' }}
                 loading={isLoading}
                 grid={{ gutter: 16, column: 6 }}
                 dataSource={filteredPhotos}
-                className={styles.list}
                 renderItem={(item) => (
                     <ProductCard
                         item={item}
                         isLiked={likedIds.includes(item.id)}
                         onLike={(e) => handleLike(item.id, e)}
                         onDelete={(e) => handleDelete(item.id, e)}
-                        onClick={() => navigate(`/product/${item.id}`)}
+                        onClick={() => handleCardClick(item.id, navigate)}
                     />
                 )}
             />
 
             <Button
-                type="primary"
                 onClick={() => navigate('/create-product')}
-                className={styles.button_createTest}
+                className={styles.createButton}
             >
-                Создать новую карточку
+                Создать карточку
             </Button>
         </div>
     );
 };
-export default ListOfProducts

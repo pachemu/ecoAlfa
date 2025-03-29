@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit';
-import { UnsplashPhoto } from '../../api/productsApi.ts';
 import { RootState } from '../StoreProvider.ts';
+import {UnsplashPhoto} from "../../../shared/product/types/types.ts";
 
 interface PhotosState {
     rawPhotos: UnsplashPhoto[];
